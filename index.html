@@ -358,6 +358,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbw0a0YN15LrJk6RhJzSPw4a
 
 // ── STATE ─────────────────────────────────────────────────────
 let _exec = null, _gantt = null, _scurve = null, _field = null, _critical = null, _vendor = null;
+let _fieldRowsFiltered = [];
 let _scurveChart = null;
 
 // ── TABS ──────────────────────────────────────────────────────
@@ -879,8 +880,17 @@ function initField() {
   const d = _field;
   if (!d || !d.rows) return;
 
+  const headers = d.headers;
+  const iApp = headers.indexOf('App');
+
+  // Only carry rows through where the App% column is > 0
+  _fieldRowsFiltered = d.rows.filter(r => {
+    const v = parseFloat(String(r[iApp]).replace('%', ''));
+    return !isNaN(v) && v > 0;
+  });
+
   // Team is always first column (index 0)
-  const teams = [...new Set(d.rows.map(r => r[0]).filter(Boolean))].sort();
+  const teams = [...new Set(_fieldRowsFiltered.map(r => r[0]).filter(Boolean))].sort();
   const sel = document.getElementById('fieldTeam');
   sel.innerHTML = '<option value="">All Teams</option>' +
     teams.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -905,7 +915,7 @@ function renderField() {
   const iProj   = headers.indexOf('Project');
   const iApp    = headers.indexOf('App');
 
-  let rows = d.rows.filter(r => {
+  let rows = _fieldRowsFiltered.filter(r => {
     if (team   && r[iTeam]   !== team)   return false;
     if (status && iStatus >= 0 && r[iStatus] !== status) return false;
     if (search && !r.join(' ').toLowerCase().includes(search)) return false;
