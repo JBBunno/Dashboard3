@@ -265,13 +265,16 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
           <div class="leg-line" style="background:var(--red)"></div><span>Planned</span>
         </div>
         <div class="chart-legend-item">
-          <div class="leg-line" style="background:#aaa;border-top:2px dashed #aaa;height:0"></div><span style="color:var(--bright)">Completed</span>
+          <div class="leg-line" style="background:#e2eaf5;border-top:2px dashed #e2eaf5;height:0"></div><span style="color:var(--bright)">Completed</span>
         </div>
         <div class="chart-legend-item">
           <div class="leg-line" style="background:var(--blue);border-top:2px dashed var(--blue);height:0"></div><span>Forecast</span>
         </div>
         <div class="chart-legend-item">
-          <div class="leg-line" style="background:rgba(180,180,180,.4);height:10px;border-radius:2px"></div><span>Spent (hrs)</span>
+          <div class="leg-line" style="background:rgba(91,155,213,.55);height:10px;border-radius:2px"></div><span>Spent (hrs)</span>
+        </div>
+        <div class="chart-legend-item">
+          <div class="leg-line" style="background:rgba(180,180,180,.35);height:10px;border-radius:2px"></div><span>Remaining (hrs)</span>
         </div>
       </div>
       <div style="position:relative;height:180px">
@@ -591,27 +594,42 @@ function renderScurve() {
   const s = d.series[area];
   if (!s) return;
 
-  const { labels, work, actual, baseline } = s;
+  const { labels, work, actual, baseline, spentBar, remainingBar } = s;
 
-  // Find where actual data ends
-  let cutoff = actual.length - 1;
-  while (cutoff > 0 && actual[cutoff] === 0) cutoff--;
-
-  // Forecast: actual up to cutoff, then projected at baseline rate
-  const forecast = actual.map((v, i) => i <= cutoff ? v : null);
   const maxBase = baseline[baseline.length - 1] || 1;
-  for (let i = cutoff; i < labels.length; i++) {
-    const progress = cutoff > 0 ? actual[cutoff] / maxBase : 0;
-    const remaining = maxBase - actual[cutoff];
-    const steps = labels.length - cutoff;
-    forecast[i] = Math.min(maxBase, actual[cutoff] + (remaining / steps) * (i - cutoff));
+
+  // Forecast: where actual progress has been recorded, use it directly.
+  // Beyond that, project forward by following the shape of the Baseline
+  // curve (scaled by current pace), rather than a straight-line ramp.
+  // If no actual progress has been recorded yet (pre-shutdown), Forecast
+  // simply mirrors the Baseline/Planned curve — matching Planned exactly
+  // until real field data starts to differentiate them.
+  const noActualYet = actual.every(v => !v);
+  let forecast;
+
+  if (noActualYet) {
+    forecast = baseline.slice();
+  } else {
+    let cutoff = actual.length - 1;
+    while (cutoff > 0 && actual[cutoff] === 0) cutoff--;
+
+    forecast = actual.map((v, i) => i <= cutoff ? v : null);
+    const baselineAtCutoff = baseline[cutoff] || 0;
+    const actualAtCutoff   = actual[cutoff]   || 0;
+    const paceRatio = baselineAtCutoff > 0 ? actualAtCutoff / baselineAtCutoff : 1;
+
+    for (let i = cutoff; i < labels.length; i++) {
+      const baselineDelta = baseline[i] - baselineAtCutoff;
+      forecast[i] = Math.min(maxBase, actualAtCutoff + baselineDelta * paceRatio);
+    }
   }
 
-  // Per-period spent (bar heights)
-  const spent = [actual[0] || 0];
-  for (let i = 1; i < actual.length; i++) {
-    spent.push(Math.max(0, actual[i] - actual[i - 1]));
-  }
+  // Bar heights come straight from the backend: per-period planned Work
+  // hours, split into "already past today" (spentBar) vs "still ahead of
+  // today" (remainingBar). Fall back to zeros if an older API response
+  // without these fields is still cached.
+  const spent  = spentBar    || labels.map(() => 0);
+  const remain = remainingBar || labels.map(() => 0);
 
   // Thin x-axis labels
   const step = Math.ceil(labels.length / 18);
@@ -626,8 +644,13 @@ function renderScurve() {
       datasets: [
         {
           type: 'bar', label: 'Spent (hrs)', data: spent,
-          backgroundColor: 'rgba(180,180,180,.2)', borderColor: 'transparent',
-          yAxisID: 'yHrs', order: 4,
+          backgroundColor: 'rgba(91,155,213,.55)', borderColor: 'transparent',
+          yAxisID: 'yHrs', order: 5, stack: 'hrs',
+        },
+        {
+          type: 'bar', label: 'Remaining (hrs)', data: remain,
+          backgroundColor: 'rgba(180,180,180,.35)', borderColor: 'transparent',
+          yAxisID: 'yHrs', order: 4, stack: 'hrs',
         },
         {
           type: 'line', label: 'Planned', data: work,
@@ -637,8 +660,8 @@ function renderScurve() {
         },
         {
           type: 'line', label: 'Completed', data: actual,
-          borderColor: '#ccc', backgroundColor: 'transparent',
-          borderWidth: 2, borderDash: [6,3], pointRadius: 0, tension: 0.3,
+          borderColor: '#e2eaf5', backgroundColor: 'transparent',
+          borderWidth: 3, borderDash: [6,3], pointRadius: 0, tension: 0.3,
           yAxisID: 'yPct', order: 2,
         },
         {
