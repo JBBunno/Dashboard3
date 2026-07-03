@@ -712,7 +712,7 @@ function renderVendorChart() {
 
   const labels    = d.vendors.map(v => v.team);
   const pctUpd    = d.vendors.map(v => v.pctUpdated);
-  const targetPct = d.vendors.map(() => 100);
+  const targetPct = d.vendors.map(v => v.targetPct);
   const compRatio = d.vendors.map(v => v.completionRatio);
 
   const ctx = document.getElementById('vendorCanvas').getContext('2d');
@@ -796,8 +796,8 @@ function renderVendorTable() {
     <td style="text-align:center;font-family:var(--font-d)">${v.updated}</td>
     <td style="text-align:center;font-family:var(--font-d)">${v.total}</td>
     <td style="text-align:center;font-family:var(--font-d)">${v.targetUpdates}</td>
-    <td style="text-align:center">${pctTag(v.pctUpdated)}</td>
-    <td style="text-align:center;font-family:var(--font-d);color:var(--muted)">100%</td>
+    <td style="text-align:center">${pctTag(v.pctUpdated, v.targetPct)}</td>
+    <td style="text-align:center;font-family:var(--font-d);color:var(--muted)">${v.targetPct}%</td>
     <td style="text-align:center;font-family:var(--font-d)">${v.completedTasks}</td>
     <td style="text-align:center">${pctTag(v.completionRatio)}</td>
   </tr>`).join('');
