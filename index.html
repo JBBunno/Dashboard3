@@ -265,7 +265,7 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
           <div class="leg-line" style="background:var(--red)"></div><span>Planned</span>
         </div>
         <div class="chart-legend-item">
-          <div class="leg-line" style="background:#e2eaf5;border-top:2px dashed #e2eaf5;height:0"></div><span style="color:var(--bright)">Completed</span>
+          <div class="leg-line" style="background:#000;border-top:2px dashed #000;height:0"></div><span style="color:var(--bright)">Completed</span>
         </div>
         <div class="chart-legend-item">
           <div class="leg-line" style="background:var(--blue);border-top:2px dashed var(--blue);height:0"></div><span>Forecast</span>
@@ -594,44 +594,41 @@ function renderScurve() {
   const s = d.series[area];
   if (!s) return;
 
-  const { labels, work, actual, baseline, spentBar, remainingBar } = s;
+  const { labels, work, actual, baseline, spentBar, remainingBar, nowIndex } = s;
 
-  const maxBase = baseline[baseline.length - 1] || 1;
+  const maxWork = work[work.length - 1] || 1;
 
-  // Forecast: where actual progress has been recorded, use it directly.
-  // Beyond that, project forward by following the shape of the Baseline
-  // curve (scaled by current pace), rather than a straight-line ramp.
-  // If no actual progress has been recorded yet (pre-shutdown), Forecast
-  // simply mirrors the Baseline/Planned curve — matching Planned exactly
-  // until real field data starts to differentiate them.
+  // "now" cutoff — the last period on/before the current time. Falls back
+  // to the last array index (old cached API responses without nowIndex).
+  const idx = (typeof nowIndex === 'number' && nowIndex >= 0) ? nowIndex : actual.length - 1;
+
+  // Completed: actual is a cumulative running total, so once real progress
+  // stops it plateaus at the same value rather than returning to 0 — it
+  // never becomes null on its own. Truncate everything after "now" to
+  // null so Chart.js actually stops drawing the line there.
+  const completed = actual.map((v, i) => i <= idx ? v : null);
+
+  // Forecast: shadow the Planned curve's shape from "now" onward, offset
+  // by a constant amount equal to the current variance (ahead/behind).
   const noActualYet = actual.every(v => !v);
   let forecast;
 
   if (noActualYet) {
-    forecast = baseline.slice();
+    forecast = work.slice();
   } else {
-    let cutoff = actual.length - 1;
-    while (cutoff > 0 && actual[cutoff] === 0) cutoff--;
+    const actualAtNow = actual[idx] || 0;
+    const workAtNow    = work[idx]   || 0;
+    const offset = actualAtNow - workAtNow;
 
-    forecast = actual.map((v, i) => i <= cutoff ? v : null);
-    const baselineAtCutoff = baseline[cutoff] || 0;
-    const actualAtCutoff   = actual[cutoff]   || 0;
-    const paceRatio = baselineAtCutoff > 0 ? actualAtCutoff / baselineAtCutoff : 1;
-
-    for (let i = cutoff; i < labels.length; i++) {
-      const baselineDelta = baseline[i] - baselineAtCutoff;
-      forecast[i] = Math.min(maxBase, actualAtCutoff + baselineDelta * paceRatio);
+    forecast = actual.map((v, i) => i <= idx ? v : null);
+    for (let i = idx; i < labels.length; i++) {
+      forecast[i] = Math.max(0, Math.min(maxWork, work[i] + offset));
     }
   }
 
-  // Bar heights come straight from the backend: per-period planned Work
-  // hours, split into "already past today" (spentBar) vs "still ahead of
-  // today" (remainingBar). Fall back to zeros if an older API response
-  // without these fields is still cached.
   const spent  = spentBar    || labels.map(() => 0);
   const remain = remainingBar || labels.map(() => 0);
 
-  // Thin x-axis labels
   const step = Math.ceil(labels.length / 18);
   const sparseLabels = labels.map((l, i) => i % step === 0 ? l : '');
 
@@ -659,15 +656,17 @@ function renderScurve() {
           yAxisID: 'yPct', order: 1,
         },
         {
-          type: 'line', label: 'Completed', data: actual,
-          borderColor: '#e2eaf5', backgroundColor: 'transparent',
+          type: 'line', label: 'Completed', data: completed,
+          borderColor: '#000000', backgroundColor: 'transparent',
           borderWidth: 3, borderDash: [6,3], pointRadius: 0, tension: 0.3,
+          spanGaps: false,
           yAxisID: 'yPct', order: 2,
         },
         {
           type: 'line', label: 'Forecast', data: forecast,
           borderColor: '#4b8ef5', backgroundColor: 'transparent',
           borderWidth: 2, borderDash: [4,4], pointRadius: 0, tension: 0.3,
+          spanGaps: false,
           yAxisID: 'yPct', order: 3,
         },
       ],
@@ -684,7 +683,7 @@ function renderScurve() {
           callbacks: {
             label: ctx => {
               const max = Math.max(...work.filter(Boolean));
-              if (ctx.dataset.yAxisID === 'yPct' && max > 0) {
+              if (ctx.dataset.yAxisID === 'yPct' && max > 0 && ctx.raw !== null) {
                 const pct = (ctx.raw / max * 100).toFixed(1);
                 return ` ${ctx.dataset.label}: ${ctx.raw} hrs (${pct}%)`;
               }
