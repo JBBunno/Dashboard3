@@ -7,7 +7,6 @@
 <title>Shutdown Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
-
 :root {
   --coal:    #0d1117;
   --slate:   #161b22;
@@ -26,10 +25,8 @@
   --font-u:  'Inter',system-ui,sans-serif;
   --r: 6px;
 }
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--coal);color:var(--text);font-family:var(--font-u);font-size:14px;min-height:100vh}
-
 /* ── HEADER ── */
 header{
   background:var(--slate);border-bottom:1px solid var(--border);
@@ -44,7 +41,6 @@ header{
   padding:5px 14px;border-radius:var(--r);cursor:pointer;font-size:12px;
   font-family:var(--font-u);transition:border-color .15s,color .15s;white-space:nowrap}
 .btn:hover{border-color:var(--amber);color:var(--amber)}
-
 /* ── TABS ── */
 nav{background:var(--slate);border-bottom:1px solid var(--border);display:flex;padding:0 20px}
 nav button{
@@ -54,14 +50,12 @@ nav button{
 }
 nav button.active,nav button:hover{color:var(--bright)}
 nav button.active{border-bottom-color:var(--amber)}
-
 /* ── LAYOUT ── */
 main{padding:16px 20px;max-width:1600px;margin:0 auto}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
 .mb12{margin-bottom:12px}
 .mb16{margin-bottom:16px}
-
 /* ── SHUTDOWN NAME / KPI BAND ── */
 .name-kpi-band{
   background:linear-gradient(135deg,#0d4a5a 0%,#0a3545 50%,#0d1a2e 100%);
@@ -94,7 +88,6 @@ main{padding:16px 20px;max-width:1600px;margin:0 auto}
 .kv-amber{color:var(--amber)!important}
 .kv-red{color:var(--red)!important}
 .kv-white{color:#fff!important}
-
 /* ── MAINTENANCE WINDOW BAND ── */
 .maint-band{
   background:var(--panel2);border:1px solid #1e3a5a;border-radius:var(--r);
@@ -113,11 +106,9 @@ main{padding:16px 20px;max-width:1600px;margin:0 auto}
 .maint-field-value.green{color:var(--green)}
 .maint-field-value.amber{color:var(--amber)}
 .maint-field-value.red{color:var(--red)}
-
 /* ── PANEL ── */
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:12px}
 .panel-title{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-
 /* ── AREA TABLE ── */
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
@@ -138,7 +129,6 @@ tr:hover td{background:rgba(75,142,245,.04)}
 .fv-pos{color:var(--red);font-family:var(--font-d)}
 .fv-neg{color:var(--green);font-family:var(--font-d)}
 .fv-zero{color:var(--muted);font-family:var(--font-d)}
-
 /* ── GANTT ── */
 .gantt-wrap{display:flex;flex-direction:column;gap:5px}
 .gantt-row{display:flex;align-items:center;gap:8px}
@@ -152,13 +142,11 @@ tr:hover td{background:rgba(75,142,245,.04)}
 .gantt-legend{display:flex;gap:14px;margin-bottom:10px;font-size:11px;color:var(--muted)}
 .gantt-legend span{display:flex;align-items:center;gap:5px}
 .gantt-legend i{display:inline-block;width:12px;height:7px;border-radius:2px}
-
 /* ── S-CURVE ── */
 .scurve-controls{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .chart-legend{display:flex;gap:18px;margin-bottom:10px;flex-wrap:wrap}
 .chart-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
 .leg-line{width:24px;height:2px;border-radius:1px}
-
 /* ── FIELD UPDATES ── */
 .filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 input[type=text]{
@@ -177,7 +165,6 @@ select:focus{border-color:var(--amber)}
 .badge-done{color:var(--green);background:rgba(45,204,138,.12)}
 .badge-pend{color:var(--amber);background:rgba(245,166,35,.12)}
 td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:left}
-
 /* ── LOADING / ERROR ── */
 .overlay{
   position:fixed;inset:0;background:var(--coal);
@@ -192,12 +179,10 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
 </style>
 </head>
 <body>
-
 <div class="overlay" id="overlay">
   <div class="spinner"></div>
   <div class="spin-text">Loading shutdown data…</div>
 </div>
-
 <header>
   <span class="logo">Palm Crest</span>
   <span class="hdr-name" id="hdrName">LiveTrack Shutdown Dashboard</span>
@@ -205,26 +190,22 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
   <span class="hdr-ago" id="hdrAgo"></span>
   <button class="btn" onclick="loadAll()">↻ Refresh</button>
 </header>
-
 <nav>
   <button class="active" onclick="switchTab('exec',this)">Executive Summary</button>
   <button onclick="switchTab('critical',this)">Critical Works</button>
   <button onclick="switchTab('vendor',this)">Vendor Updates</button>
   <button onclick="switchTab('field',this)">Field Updates</button>
+  <button onclick="switchTab('outstanding',this)">Outstanding</button>
 </nav>
-
 <main>
   <div class="err" id="errBanner"></div>
-
   <!-- ══ EXECUTIVE SUMMARY ══ -->
   <div id="tab-exec" class="tab-panel active">
-
     <!-- Name + KPIs -->
     <div class="name-kpi-band mb12" id="nameKpiBand">
       <div class="shutdown-name-block" id="execShutdownName">SHUTDOWN NAME HERE</div>
       <div class="kpi-band" id="execKpiBand"></div>
     </div>
-
     <!-- Maintenance Window -->
     <div class="maint-band mb12">
       <div class="maint-title">
@@ -236,13 +217,11 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
       </div>
       <div class="maint-fields" id="maintFields"></div>
     </div>
-
     <!-- Shutdown Areas Table -->
     <div class="panel mb12">
       <div class="panel-title">Shutdown Areas</div>
       <div class="tbl-wrap"><table id="areaTable"></table></div>
     </div>
-
     <!-- Gantt -->
     <div class="panel mb12">
       <div class="panel-title">Shutdown Progress</div>
@@ -253,7 +232,6 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
       </div>
       <div class="gantt-wrap" id="ganttChart"></div>
     </div>
-
     <!-- S-Curve -->
     <div class="panel">
       <div class="scurve-controls">
@@ -281,9 +259,7 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
         <canvas id="scurveCanvas"></canvas>
       </div>
     </div>
-
   </div>
-
   <!-- ══ CRITICAL WORKS ══ -->
   <div id="tab-critical" class="tab-panel">
     <div class="filter-row">
@@ -305,7 +281,6 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
       <div class="tbl-wrap"><table id="critTable"></table></div>
     </div>
   </div>
-
   <!-- ══ VENDOR UPDATES ══ -->
   <div id="tab-vendor" class="tab-panel">
     <div class="panel mb12">
@@ -333,7 +308,6 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
       <div class="tbl-wrap"><table id="vendorTable"></table></div>
     </div>
   </div>
-
   <!-- ══ FIELD UPDATES ══ -->
   <div id="tab-field" class="tab-panel">
     <div class="filter-row">
@@ -349,21 +323,32 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
       <div class="tbl-wrap"><table id="fieldTable"></table></div>
     </div>
   </div>
-
+  <!-- ══ OUTSTANDING (NOT YET UPDATED) ══ -->
+  <div id="tab-outstanding" class="tab-panel">
+    <div class="filter-row">
+      <input type="text" id="outSearch" placeholder="Search team, WO…" oninput="renderOutstanding()">
+      <select id="outTeam" onchange="renderOutstanding()"><option value="">All Teams</option></select>
+    </div>
+    <div class="panel mb12">
+      <div class="panel-title">Tasks Not Yet Updated</div>
+      <div style="font-family:var(--font-d);font-size:13px;color:var(--amber)" id="outstandingCount"></div>
+    </div>
+    <div class="panel">
+      <div class="tbl-wrap"><table id="outstandingTable"></table></div>
+    </div>
+  </div>
 </main>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════
 // CONFIG — paste your deployed GAS Web App URL here
 // ══════════════════════════════════════════════════════════════
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbw0a0YN15LrJk6RhJzSPw4aXx2mjT1tsGEDF3DRpDB1tENAvXte6bsq3dDxrm_gO3664A/exec';
-
 // ── STATE ─────────────────────────────────────────────────────
 let _exec = null, _gantt = null, _scurve = null, _field = null, _critical = null, _vendor = null;
 let _fieldRowsFiltered = [];
+let _outstandingRowsFiltered = [];
 let _scurveChart = null;
-
 // ── TABS ──────────────────────────────────────────────────────
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -371,7 +356,6 @@ function switchTab(id, btn) {
   document.getElementById('tab-' + id).classList.add('active');
   btn.classList.add('active');
 }
-
 // ── FETCH ─────────────────────────────────────────────────────
 async function gas(action, extra) {
   const url = GAS_URL + '?action=' + action + (extra || '') + '&t=' + Date.now();
@@ -381,13 +365,11 @@ async function gas(action, extra) {
   if (data.error) throw new Error(data.error);
   return data;
 }
-
 function showErr(msg) {
   const b = document.getElementById('errBanner');
   b.textContent = msg;
   b.style.display = 'block';
 }
-
 async function loadAll() {
   document.getElementById('overlay').style.display = 'flex';
   document.getElementById('errBanner').style.display = 'none';
@@ -405,13 +387,13 @@ async function loadAll() {
     initCritical();
     initVendor();
     initField();
+    initOutstanding();
   } catch(e) {
     showErr('Error loading data: ' + e.message);
   } finally {
     document.getElementById('overlay').style.display = 'none';
   }
 }
-
 // ── META ──────────────────────────────────────────────────────
 function applyMeta(m) {
   if (m.shutdownName) {
@@ -428,7 +410,6 @@ function applyMeta(m) {
     el.style.color = m.hoursAgo > 72 ? 'var(--red)' : m.hoursAgo > 24 ? 'var(--amber)' : 'var(--green)';
   }
 }
-
 // ── HELPERS ───────────────────────────────────────────────────
 function pctCls(p) { return p >= 90 ? 'kv-green' : p >= 50 ? 'kv-amber' : 'kv-red'; }
 function fmtN(n, dp=2) {
@@ -437,19 +418,16 @@ function fmtN(n, dp=2) {
 }
 function fmtN1(n) { return fmtN(n,1); }
 function fmtN0(n) { return fmtN(n,0); }
-
 function fvTag(fv) {
   if (fv > 0) return `<span class="fv-pos">+${fmtN1(fv)}</span>`;
   if (fv < 0) return `<span class="fv-neg">${fmtN1(fv)}</span>`;
   return `<span class="fv-zero">0.0</span>`;
 }
-
 // ── EXEC SUMMARY ─────────────────────────────────────────────
 function renderExec() {
   const d = _exec;
   if (!d || !d.kpis) return;
   const { kpis, areas } = d;
-
   // KPI band — always top-level rollup
   const pc  = kpis.pctComplete || 0;
   const ov  = kpis.forecastOverrun || 0;
@@ -475,7 +453,6 @@ function renderExec() {
         ${fmtN1(rw)} Hrs
       </div>
     </div>`;
-
   // Populate area selector with all ES row names
   const sel = document.getElementById('maintAreaSelect');
   sel.innerHTML = (areas || []).map(a =>
@@ -484,9 +461,7 @@ function renderExec() {
   // Default to Maintenance Window row if present, else first
   const mwOpt = (areas || []).find(a => /maintenance window/i.test(a.name));
   if (mwOpt) sel.value = mwOpt.name;
-
   renderMaintWindow();
-
   // Area table
   const cols = ['Area','% Comp','Duration','Completed Work','Total Work','Remaining Work','Start','Forecast Finish','Hrs to Critical','Finish Var'];
   const tbody = (areas || []).map(a => {
@@ -506,20 +481,16 @@ function renderExec() {
       <td>${fvTag(a.finishVariance)}</td>
     </tr>`;
   }).join('');
-
   document.getElementById('areaTable').innerHTML =
     `<thead><tr>${cols.map(h => `<th>${h}</th>`).join('')}</tr></thead>
      <tbody>${tbody || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>'}</tbody>`;
 }
-
 function renderMaintWindow() {
   const d = _exec;
   if (!d || !d.areas) return;
-
   const selName = document.getElementById('maintAreaSelect').value;
   const area = d.areas.find(a => a.name === selName) || d.areas[0];
   if (!area) return;
-
   const ov = area.finishVariance || 0;
   document.getElementById('maintFields').innerHTML = `
     <div class="maint-field">
@@ -551,15 +522,12 @@ function renderMaintWindow() {
       </div>
     </div>`;
 }
-
 // ── GANTT ─────────────────────────────────────────────────────
 function renderGantt() {
   const d = _gantt;
   if (!d || !d.areas || d.areas.length === 0) return;
-
   const maxHrs = d.areas.reduce((m, a) =>
     Math.max(m, a.startOffset + a.completed + a.remaining), 1);
-
   document.getElementById('ganttChart').innerHTML = d.areas.map(a => {
     const offPct  = (a.startOffset / maxHrs * 100).toFixed(2);
     const donePct = (a.completed   / maxHrs * 100).toFixed(2);
@@ -577,7 +545,6 @@ function renderGantt() {
     </div>`;
   }).join('');
 }
-
 // ── S-CURVE ───────────────────────────────────────────────────
 function initScurve() {
   const d = _scurve;
@@ -586,55 +553,35 @@ function initScurve() {
   sel.innerHTML = d.areas.map(a => `<option value="${a}">${a}</option>`).join('');
   renderScurve();
 }
-
 function renderScurve() {
   const d = _scurve;
   if (!d || !d.series) return;
   const area = document.getElementById('scurveArea').value;
   const s = d.series[area];
   if (!s) return;
-
   const { labels, work, actual, baseline, spentBar, remainingBar, nowIndex } = s;
-
   const maxWork = work[work.length - 1] || 1;
-
-  // "now" cutoff — the last period on/before the current time. Falls back
-  // to the last array index (old cached API responses without nowIndex).
   const idx = (typeof nowIndex === 'number' && nowIndex >= 0) ? nowIndex : actual.length - 1;
-
-  // Completed: actual is a cumulative running total, so once real progress
-  // stops it plateaus at the same value rather than returning to 0 — it
-  // never becomes null on its own. Truncate everything after "now" to
-  // null so Chart.js actually stops drawing the line there.
   const completed = actual.map((v, i) => i <= idx ? v : null);
-
-  // Forecast: shadow the Planned curve's shape from "now" onward, offset
-  // by a constant amount equal to the current variance (ahead/behind).
   const noActualYet = actual.every(v => !v);
   let forecast;
-
   if (noActualYet) {
     forecast = work.slice();
   } else {
     const actualAtNow = actual[idx] || 0;
     const workAtNow    = work[idx]   || 0;
     const offset = actualAtNow - workAtNow;
-
     forecast = actual.map((v, i) => i <= idx ? v : null);
     for (let i = idx; i < labels.length; i++) {
       forecast[i] = Math.max(0, Math.min(maxWork, work[i] + offset));
     }
   }
-
   const spent  = spentBar    || labels.map(() => 0);
   const remain = remainingBar || labels.map(() => 0);
-
   const step = Math.ceil(labels.length / 18);
   const sparseLabels = labels.map((l, i) => i % step === 0 ? l : '');
-
   const ctx = document.getElementById('scurveCanvas').getContext('2d');
   if (_scurveChart) _scurveChart.destroy();
-
   _scurveChart = new Chart(ctx, {
     data: {
       labels: sparseLabels,
@@ -717,29 +664,23 @@ function renderScurve() {
     },
   });
 }
-
 // ── VENDOR UPDATES ────────────────────────────────────────────
 let _vendorChart = null;
-
 function initVendor() {
   const d = _vendor;
   if (!d || !d.vendors) return;
   renderVendorChart();
   renderVendorTable();
 }
-
 function renderVendorChart() {
   const d = _vendor;
   if (!d || !d.vendors || d.vendors.length === 0) return;
-
   const labels    = d.vendors.map(v => v.team);
   const pctUpd    = d.vendors.map(v => v.pctUpdated);
   const targetPct = d.vendors.map(v => v.targetPct);
   const compRatio = d.vendors.map(v => v.completionRatio);
-
   const ctx = document.getElementById('vendorCanvas').getContext('2d');
   if (_vendorChart) _vendorChart.destroy();
-
   _vendorChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -791,11 +732,9 @@ function renderVendorChart() {
     },
   });
 }
-
 function renderVendorTable() {
   const d = _vendor;
   if (!d || !d.vendors) return;
-
   const cols = [
     { label: 'Vendor',           align: 'left'   },
     { label: 'Updated',          align: 'center' },
@@ -806,12 +745,10 @@ function renderVendorTable() {
     { label: 'Completed Tasks',  align: 'center' },
     { label: 'Completion Ratio', align: 'center' },
   ];
-
   const pctTag = (p, target=100) => {
     const cls = p >= target ? 'tag-green' : p >= target * 0.5 ? 'tag-amber' : 'tag-red';
     return `<span class="tag ${cls}">${p}%</span>`;
   };
-
   const tHead = cols.map(c => `<th style="text-align:${c.align}">${c.label}</th>`).join('');
   const tBody = d.vendors.map(v => `<tr>
     <td style="text-align:left;font-weight:500;color:var(--bright)">${v.team}</td>
@@ -823,33 +760,26 @@ function renderVendorTable() {
     <td style="text-align:center;font-family:var(--font-d)">${v.completedTasks}</td>
     <td style="text-align:center">${pctTag(v.completionRatio)}</td>
   </tr>`).join('');
-
   document.getElementById('vendorTable').innerHTML =
     `<thead><tr>${tHead}</tr></thead>` +
     `<tbody>${tBody || `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>`}</tbody>`;
 }
-
 // ── CRITICAL WORKS ────────────────────────────────────────────
 function initCritical() {
   const d = _critical;
   if (!d || !d.rows) return;
-
   const sel = document.getElementById('critTeam');
   sel.innerHTML = '<option value="">All Teams</option>' +
     (d.teams || []).map(t => `<option value="${t}">${t}</option>`).join('');
-
   renderCritical();
 }
-
 function renderCritical() {
   const d = _critical;
   if (!d || !d.rows) return;
-
   const search  = (document.getElementById('critSearch').value || '').toLowerCase();
   const team    = document.getElementById('critTeam').value;
   const pctFil  = document.getElementById('critPct').value;
   const cpctFil = document.getElementById('critCpct').value;
-
   let rows = d.rows.filter(r => {
     if (team    && r.team !== team)              return false;
     if (cpctFil && r.cpct !== parseFloat(cpctFil)) return false;
@@ -862,7 +792,6 @@ function renderCritical() {
     }
     return true;
   });
-
   const cols = [
     { label: 'CP',        align: 'center' },
     { label: 'WO Number', align: 'center' },
@@ -872,15 +801,12 @@ function renderCritical() {
     { label: '%',         align: 'center' },
     { label: 'TS',        align: 'center' },
   ];
-
   const cpDot = cpct => {
     if (cpct === 1) return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:5px;vertical-align:middle"></span>CP';
     if (cpct === 2) return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--amber);margin-right:5px;vertical-align:middle"></span>CT';
     return '—';
   };
-
   const pctCls = p => p >= 100 ? 'tag-green' : p > 0 ? 'tag-amber' : 'tag-red';
-
   const tHead = cols.map(c => `<th style="text-align:${c.align}">${c.label}</th>`).join('');
   const tBody = rows.map(r => `<tr>
     <td style="text-align:center">${cpDot(r.cpct)}</td>
@@ -891,67 +817,53 @@ function renderCritical() {
     <td style="text-align:center"><span class="tag ${pctCls(r.pctComplete)}">${r.pctComplete}%</span></td>
     <td style="text-align:center;font-family:var(--font-d)">${r.totalSlack}</td>
   </tr>`).join('');
-
   document.getElementById('critTable').innerHTML =
     `<thead><tr>${tHead}</tr></thead>` +
     `<tbody>${tBody || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No critical works found</td></tr>`}</tbody>`;
 }
-
 // ── FIELD UPDATES ─────────────────────────────────────────────
 function initField() {
   const d = _field;
   if (!d || !d.rows) return;
-
   const headers = d.headers;
   const iApp = headers.indexOf('App');
-
   // Only carry rows through where the App% column is > 0
   _fieldRowsFiltered = d.rows.filter(r => {
     const v = parseFloat(String(r[iApp]).replace('%', ''));
     return !isNaN(v) && v > 0;
   });
-
   // Team is always first column (index 0)
   const teams = [...new Set(_fieldRowsFiltered.map(r => r[0]).filter(Boolean))].sort();
   const sel = document.getElementById('fieldTeam');
   sel.innerHTML = '<option value="">All Teams</option>' +
     teams.map(t => `<option value="${t}">${t}</option>`).join('');
-
   renderField();
 }
-
 function renderField() {
   const d = _field;
   if (!d || !d.rows) return;
-
   const search = (document.getElementById('fieldSearch').value || '').toLowerCase();
   const team   = document.getElementById('fieldTeam').value;
   const status = document.getElementById('fieldStatus').value;
-
   const headers = d.headers; // colloquial labels from GAS
-
   // Known column positions by label
   const iTeam   = headers.indexOf('Team');
   const iStatus = headers.indexOf('Upload Status');
   const iNotes  = headers.indexOf('Field Notes');
   const iProj   = headers.indexOf('Project');
   const iApp    = headers.indexOf('App');
-
   let rows = _fieldRowsFiltered.filter(r => {
     if (team   && r[iTeam]   !== team)   return false;
     if (status && iStatus >= 0 && r[iStatus] !== status) return false;
     if (search && !r.join(' ').toLowerCase().includes(search)) return false;
     return true;
   });
-
   const tHead = headers.map(h => `<th style="text-align:left">${h}</th>`).join('');
-
   const tBody = rows.slice(0, 500).map(r => {
     return '<tr>' + r.map((val, ci) => {
       const isStatus = ci === iStatus;
       const isNotes  = ci === iNotes;
       const isPct    = ci === iProj || ci === iApp;
-
       if (isStatus) {
         const cls = val === 'Completed' ? 'badge-done' : 'badge-pend';
         return `<td><span class="badge ${cls}">${val || '—'}</span></td>`;
@@ -965,12 +877,51 @@ function renderField() {
       return `<td style="text-align:left">${val || '—'}</td>`;
     }).join('') + '</tr>';
   }).join('');
-
   document.getElementById('fieldTable').innerHTML =
     `<thead><tr>${tHead}</tr></thead>` +
     `<tbody>${tBody || `<tr><td colspan="${headers.length}" style="text-align:center;color:var(--muted);padding:20px">No results</td></tr>`}</tbody>`;
 }
-
+// ── OUTSTANDING (NOT YET UPDATED) ──────────────────────────────
+// Mirror of Field Updates, but inverted: shows exactly the rows the
+// Field Updates tab silently drops (App% missing, blank, or 0).
+// This is the punch list for "what has nobody touched yet."
+function initOutstanding() {
+  const d = _field;
+  if (!d || !d.rows) return;
+  const headers = d.headers;
+  const iApp = headers.indexOf('App');
+  _outstandingRowsFiltered = d.rows.filter(r => {
+    const v = parseFloat(String(r[iApp]).replace('%', ''));
+    return isNaN(v) || v <= 0;
+  });
+  const teams = [...new Set(_outstandingRowsFiltered.map(r => r[0]).filter(Boolean))].sort();
+  const sel = document.getElementById('outTeam');
+  sel.innerHTML = '<option value="">All Teams</option>' +
+    teams.map(t => `<option value="${t}">${t}</option>`).join('');
+  renderOutstanding();
+}
+function renderOutstanding() {
+  const d = _field;
+  if (!d || !d.rows) return;
+  const search = (document.getElementById('outSearch').value || '').toLowerCase();
+  const team   = document.getElementById('outTeam').value;
+  const headers = d.headers;
+  const iTeam = headers.indexOf('Team');
+  let rows = _outstandingRowsFiltered.filter(r => {
+    if (team   && r[iTeam] !== team) return false;
+    if (search && !r.join(' ').toLowerCase().includes(search)) return false;
+    return true;
+  });
+  document.getElementById('outstandingCount').textContent =
+    rows.length + ' of ' + d.rows.length + ' total task rows have not been updated (App % = 0 or blank)';
+  const tHead = headers.map(h => `<th style="text-align:left">${h}</th>`).join('');
+  const tBody = rows.slice(0, 500).map(r => {
+    return '<tr>' + r.map(val => `<td style="text-align:left">${val || '—'}</td>`).join('') + '</tr>';
+  }).join('');
+  document.getElementById('outstandingTable').innerHTML =
+    `<thead><tr>${tHead}</tr></thead>` +
+    `<tbody>${tBody || `<tr><td colspan="${headers.length}" style="text-align:center;color:var(--muted);padding:20px">All tasks have been updated</td></tr>`}</tbody>`;
+}
 // ── BOOT ──────────────────────────────────────────────────────
 loadAll();
 </script>
