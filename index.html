@@ -165,6 +165,15 @@ select:focus{border-color:var(--amber)}
 .badge-done{color:var(--green);background:rgba(45,204,138,.12)}
 .badge-pend{color:var(--amber);background:rgba(245,166,35,.12)}
 td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:left}
+/* ── OUTSTANDING SUMMARY COUNTS ── */
+.out-summary-band{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px}
+.out-summary-cell{
+  display:flex;flex-direction:column;gap:2px;
+  padding:6px 16px;border-right:1px solid var(--border);
+}
+.out-summary-cell:last-child{border-right:none}
+.out-summary-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.out-summary-value{font-family:var(--font-d);font-size:18px;font-weight:500}
 /* ── LOADING / ERROR ── */
 .overlay{
   position:fixed;inset:0;background:var(--coal);
@@ -328,10 +337,16 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
     <div class="filter-row">
       <input type="text" id="outSearch" placeholder="Search team, WO…" oninput="renderOutstanding()">
       <select id="outTeam" onchange="renderOutstanding()"><option value="">All Teams</option></select>
+      <select id="outDueFilter" onchange="renderOutstanding()">
+        <option value="">Overdue &amp; Not Due</option>
+        <option value="overdue">Overdue Only</option>
+        <option value="notdue">Not Due Only</option>
+      </select>
     </div>
     <div class="panel mb12">
       <div class="panel-title">Tasks Not Yet Updated</div>
       <div style="font-family:var(--font-d);font-size:13px;color:var(--amber)" id="outstandingCount"></div>
+      <div class="out-summary-band" id="outstandingSummary"></div>
     </div>
     <div class="panel">
       <div class="tbl-wrap"><table id="outstandingTable"></table></div>
@@ -346,6 +361,8 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbw0a0YN15LrJk6RhJzSPw4aXx2mjT1tsGEDF3DRpDB1tENAvXte6bsq3dDxrm_gO3664A/exec';
 // ── STATE ─────────────────────────────────────────────────────
 let _exec = null, _gantt = null, _scurve = null, _field = null, _critical = null, _vendor = null;
+let _outDates = null;
+let _outDatesErr = null;
 let _fieldRowsFiltered = [];
 let _outstandingRowsFiltered = [];
 let _scurveChart = null;
@@ -374,12 +391,23 @@ async function loadAll() {
   document.getElementById('overlay').style.display = 'flex';
   document.getElementById('errBanner').style.display = 'none';
   try {
+    // outstandingdates is fetched separately and never allowed to throw —
+    // if it fails (e.g. new action not deployed yet, or a bad join), the
+    // rest of the dashboard must still load normally. Outstanding just
+    // falls back to showing no due-status badges.
     const [meta, exec, gantt, scurve, field, critical, vendor] = await Promise.all([
       gas('meta'), gas('exec'), gas('gantt'), gas('scurve'),
       gas('fieldupdates'), gas('criticalworks'), gas('vendorupdates')
     ]);
+    let outDates = null, outDatesErr = null;
+    try {
+      outDates = await gas('outstandingdates');
+    } catch(e2) {
+      outDatesErr = e2.message;
+    }
     _exec = exec; _gantt = gantt; _scurve = scurve;
     _field = field; _critical = critical; _vendor = vendor;
+    _outDates = outDates; _outDatesErr = outDatesErr;
     applyMeta(meta);
     renderExec();
     renderGantt();
@@ -422,6 +450,19 @@ function fvTag(fv) {
   if (fv > 0) return `<span class="fv-pos">+${fmtN1(fv)}</span>`;
   if (fv < 0) return `<span class="fv-neg">${fmtN1(fv)}</span>`;
   return `<span class="fv-zero">0.0</span>`;
+}
+// Parse the "dd/MM/yy HH:mm" strings shutFmtDate() produces on the backend
+// back into a JS Date, so the Outstanding tab can compare against "now".
+function parseShutDate(str) {
+  if (!str) return null;
+  const parts = str.split(' ');
+  const dPart = parts[0], tPart = parts[1] || '00:00';
+  const dBits = dPart.split('/');
+  if (dBits.length !== 3) return null;
+  const [dd, mm, yy] = dBits;
+  const tBits = tPart.split(':');
+  const d = new Date(2000 + parseInt(yy,10), parseInt(mm,10) - 1, parseInt(dd,10), parseInt(tBits[0]||0,10), parseInt(tBits[1]||0,10));
+  return isNaN(d.getTime()) ? null : d;
 }
 // ── EXEC SUMMARY ─────────────────────────────────────────────
 function renderExec() {
@@ -885,6 +926,11 @@ function renderField() {
 // Mirror of Field Updates, but inverted: shows exactly the rows the
 // Field Updates tab silently drops (App% missing, blank, or 0).
 // This is the punch list for "what has nobody touched yet."
+//
+// Additive: each row is also joined (client-side) against the
+// outstandingdates lookup (Work Order + Task Number -> Planned Start)
+// to add an Overdue / Not Due badge and a count summary, without
+// changing any existing Field Updates logic or GAS action.
 function initOutstanding() {
   const d = _field;
   if (!d || !d.rows) return;
@@ -900,27 +946,102 @@ function initOutstanding() {
     teams.map(t => `<option value="${t}">${t}</option>`).join('');
   renderOutstanding();
 }
+// Returns { planStartStr, dueState } for a row, where dueState is
+// 'overdue' | 'notdue' | 'unknown' (no matching Planned Start found).
+function outstandingDueInfo(row, iWO, iTask) {
+  const lookup = (_outDates && _outDates.lookup) || {};
+  const wo   = parseFloat(String(row[iWO]).trim());
+  const task = parseFloat(String(row[iTask]).trim());
+  if (isNaN(wo) || isNaN(task)) return { planStartStr: '', dueState: 'unknown' };
+  const key = wo + '|' + task;
+  const planStartStr = lookup[key] || '';
+  if (!planStartStr) return { planStartStr: '', dueState: 'unknown' };
+  const planDate = parseShutDate(planStartStr);
+  if (!planDate) return { planStartStr, dueState: 'unknown' };
+  const dueState = planDate <= new Date() ? 'overdue' : 'notdue';
+  return { planStartStr, dueState };
+}
 function renderOutstanding() {
   const d = _field;
   if (!d || !d.rows) return;
-  const search = (document.getElementById('outSearch').value || '').toLowerCase();
-  const team   = document.getElementById('outTeam').value;
-  const headers = d.headers;
+  const search   = (document.getElementById('outSearch').value || '').toLowerCase();
+  const team     = document.getElementById('outTeam').value;
+  const dueFilter = document.getElementById('outDueFilter').value;
+  const headers  = d.headers;
   const iTeam = headers.indexOf('Team');
+  const iWO   = headers.indexOf('Work Order');
+  const iTask = headers.indexOf('Task');
+
   let rows = _outstandingRowsFiltered.filter(r => {
     if (team   && r[iTeam] !== team) return false;
     if (search && !r.join(' ').toLowerCase().includes(search)) return false;
     return true;
   });
+
+  // Attach due info once per row (used for both filtering and rendering)
+  const rowsWithDue = rows.map(r => ({ r, due: outstandingDueInfo(r, iWO, iTask) }));
+
+  const filteredByDue = rowsWithDue.filter(({ due }) => {
+    if (dueFilter === 'overdue') return due.dueState === 'overdue';
+    if (dueFilter === 'notdue')  return due.dueState === 'notdue';
+    return true;
+  });
+
+  // Count summary — computed from the team/search-filtered set (not the due filter),
+  // so the summary always shows the full breakdown regardless of which due filter is active.
+  let overdueCount = 0, notDueCount = 0, unknownCount = 0;
+  rowsWithDue.forEach(({ due }) => {
+    if (due.dueState === 'overdue') overdueCount++;
+    else if (due.dueState === 'notdue') notDueCount++;
+    else unknownCount++;
+  });
+
   document.getElementById('outstandingCount').textContent =
     rows.length + ' of ' + d.rows.length + ' total task rows have not been updated (App % = 0 or blank)';
-  const tHead = headers.map(h => `<th style="text-align:left">${h}</th>`).join('');
-  const tBody = rows.slice(0, 500).map(r => {
-    return '<tr>' + r.map(val => `<td style="text-align:left">${val || '—'}</td>`).join('') + '</tr>';
+
+  if (_outDatesErr) {
+    document.getElementById('outstandingSummary').innerHTML =
+      `<div style="color:var(--muted);font-size:12px;padding:6px 0">
+        Overdue / Not Due split unavailable right now (${_outDatesErr}). Everything else on this dashboard is unaffected.
+      </div>`;
+    document.getElementById('outstandingTable').innerHTML =
+      `<thead><tr>${headers.map(h => `<th style="text-align:left">${h}</th>`).join('')}</tr></thead>` +
+      `<tbody>${rows.slice(0,500).map(r => '<tr>' + r.map(val => `<td style="text-align:left">${val || '—'}</td>`).join('') + '</tr>').join('') ||
+        `<tr><td colspan="${headers.length}" style="text-align:center;color:var(--muted);padding:20px">All tasks have been updated</td></tr>`}</tbody>`;
+    return;
+  }
+
+  document.getElementById('outstandingSummary').innerHTML = `
+    <div class="out-summary-cell">
+      <div class="out-summary-label">Overdue</div>
+      <div class="out-summary-value" style="color:var(--red)">${overdueCount}</div>
+    </div>
+    <div class="out-summary-cell">
+      <div class="out-summary-label">Not Due Yet</div>
+      <div class="out-summary-value" style="color:var(--blue)">${notDueCount}</div>
+    </div>
+    <div class="out-summary-cell">
+      <div class="out-summary-label">No Planned Date Found</div>
+      <div class="out-summary-value" style="color:var(--muted)">${unknownCount}</div>
+    </div>`;
+
+  const tHead = headers.map(h => `<th style="text-align:left">${h}</th>`).join('') +
+    '<th style="text-align:left">Planned Start</th><th style="text-align:center">Status</th>';
+
+  const tBody = filteredByDue.slice(0, 500).map(({ r, due }) => {
+    let statusBadge = '<span class="tag" style="color:var(--muted);background:rgba(77,96,128,.12)">Unknown</span>';
+    if (due.dueState === 'overdue') statusBadge = '<span class="tag tag-red">Overdue</span>';
+    else if (due.dueState === 'notdue') statusBadge = '<span class="tag tag-blue">Not Due</span>';
+    return '<tr>' +
+      r.map(val => `<td style="text-align:left">${val || '—'}</td>`).join('') +
+      `<td style="text-align:left;font-family:var(--font-d)">${due.planStartStr || '—'}</td>` +
+      `<td style="text-align:center">${statusBadge}</td>` +
+    '</tr>';
   }).join('');
+
   document.getElementById('outstandingTable').innerHTML =
     `<thead><tr>${tHead}</tr></thead>` +
-    `<tbody>${tBody || `<tr><td colspan="${headers.length}" style="text-align:center;color:var(--muted);padding:20px">All tasks have been updated</td></tr>`}</tbody>`;
+    `<tbody>${tBody || `<tr><td colspan="${headers.length + 2}" style="text-align:center;color:var(--muted);padding:20px">All tasks have been updated</td></tr>`}</tbody>`;
 }
 // ── BOOT ──────────────────────────────────────────────────────
 loadAll();
