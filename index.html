@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1025,17 +1026,22 @@ function renderOutstanding() {
       <div class="out-summary-value" style="color:var(--muted)">${unknownCount}</div>
     </div>`;
 
-  const tHead = headers.map(h => `<th style="text-align:left">${h}</th>`).join('') +
-    '<th style="text-align:left">Planned Start</th><th style="text-align:center">Status</th>';
+  const tHead = '<th style="text-align:left">' + headers[iTeam] + '</th>' +
+    '<th style="text-align:center">Status</th>' +
+    '<th style="text-align:left">Planned Start</th>' +
+    headers.filter((h, ci) => ci !== iTeam).map(h => `<th style="text-align:left">${h}</th>`).join('');
+
+  const otherIdxs = headers.map((h, ci) => ci).filter(ci => ci !== iTeam);
 
   const tBody = filteredByDue.slice(0, 500).map(({ r, due }) => {
     let statusBadge = '<span class="tag" style="color:var(--muted);background:rgba(77,96,128,.12)">Unknown</span>';
     if (due.dueState === 'overdue') statusBadge = '<span class="tag tag-red">Overdue</span>';
     else if (due.dueState === 'notdue') statusBadge = '<span class="tag tag-blue">Not Due</span>';
     return '<tr>' +
-      r.map(val => `<td style="text-align:left">${val || '—'}</td>`).join('') +
-      `<td style="text-align:left;font-family:var(--font-d)">${due.planStartStr || '—'}</td>` +
+      `<td style="text-align:left">${r[iTeam] || '—'}</td>` +
       `<td style="text-align:center">${statusBadge}</td>` +
+      `<td style="text-align:left;font-family:var(--font-d)">${due.planStartStr || '—'}</td>` +
+      otherIdxs.map(ci => `<td style="text-align:left">${r[ci] || '—'}</td>`).join('') +
     '</tr>';
   }).join('');
 
