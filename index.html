@@ -186,6 +186,43 @@ td.notes-cell{white-space:normal;max-width:260px;color:var(--bright);text-align:
 .spin-text{font-size:13px;color:var(--muted)}
 .err{background:rgba(224,85,85,.1);border:1px solid var(--red);border-radius:var(--r);
   color:var(--red);padding:10px 16px;margin-bottom:12px;font-size:13px;display:none}
+
+/* ── PACKAGE DRILL-DOWN POP-UP (added) ── */
+#areaTable tbody tr.pd-click{cursor:pointer}
+#areaTable tbody tr.pd-click:hover td{background:rgba(245,166,35,.06)}
+#areaTable tbody tr.pd-click td:first-child::after{content:"›";color:var(--muted);margin-left:8px;font-weight:600}
+.gantt-row.pd-click{cursor:pointer;border-radius:4px}
+.gantt-row.pd-click:hover{background:rgba(245,166,35,.06)}
+.gantt-row.pd-click:hover .gantt-label{color:var(--amber)}
+.pd-bg{position:fixed;inset:0;background:rgba(5,8,12,.7);display:none;align-items:center;justify-content:center;z-index:900;padding:16px}
+.pd-bg.open{display:flex}
+.pd-modal{background:var(--slate);border:1px solid var(--border);border-radius:8px;width:100%;max-width:620px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.55);overflow:hidden}
+.pd-head{background:var(--panel2);padding:16px 20px;display:flex;gap:12px;align-items:flex-start;border-bottom:2px solid var(--amber)}
+.pd-eyebrow{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin-bottom:4px}
+.pd-title{font-size:17px;font-weight:600;line-height:1.3;color:var(--bright)}
+.pd-close{margin-left:auto;background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.pd-close:hover{color:var(--bright)}
+.pd-body{padding:18px 20px;overflow:auto}
+.pd-bar{height:10px;background:var(--panel);border-radius:5px;overflow:hidden;margin-bottom:16px}
+.pd-bar b{display:block;height:100%;background:var(--green)}
+.pd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px;margin-bottom:16px}
+@media(max-width:520px){.pd-grid{grid-template-columns:repeat(2,1fr)}}
+.pd-label{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.pd-value{font-family:var(--font-d);font-size:13px;color:var(--bright)}
+.pd-sec-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+.pd-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:520px){.pd-stats{grid-template-columns:repeat(3,1fr)}}
+.pd-stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;text-align:center}
+.pd-stat b{display:block;font-family:var(--font-d);font-size:18px;color:var(--bright)}
+.pd-stat span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pd-late{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
+.pd-late th{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
+.pd-late th:first-child,.pd-late td:first-child{text-align:left}
+.pd-late td{padding:6px 8px;border-bottom:1px solid rgba(42,52,68,.6);text-align:right;color:var(--text)}
+.pd-notes{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--r);padding:12px 14px;font-size:13px;line-height:1.55;color:var(--bright);white-space:pre-wrap;word-break:break-word}
+.pd-notes.pd-empty{color:var(--muted);font-style:italic;border-left-color:var(--border)}
+.pd-more{font-size:11px;color:var(--muted);margin:4px 0 16px}
+.pd-loading{font-size:12px;color:var(--muted);margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -506,11 +543,11 @@ function renderExec() {
   renderMaintWindow();
   // Area table
   const cols = ['Area','% Comp','Duration','Completed Work','Total Work','Remaining Work','Start','Forecast Finish','Hrs to Critical','Finish Var'];
-  const tbody = (areas || []).map(a => {
+  const tbody = (areas || []).map((a, idx) => {
     const pc2 = a.pctComplete || 0;
     const tagCls = pc2 >= 90 ? 'tag-green' : pc2 >= 50 ? 'tag-amber' : 'tag-red';
     const htc = a.hoursToCritical || 0;
-    return `<tr>
+    return `<tr class="pd-click" onclick="pdShow(_exec.areas[${idx}].name)" title="Click for detail">
       <td>${a.name}</td>
       <td><span class="tag ${tagCls}">${pc2}%</span></td>
       <td>${fmtN1(a.duration)}</td>
@@ -570,12 +607,12 @@ function renderGantt() {
   if (!d || !d.areas || d.areas.length === 0) return;
   const maxHrs = d.areas.reduce((m, a) =>
     Math.max(m, a.startOffset + a.completed + a.remaining), 1);
-  document.getElementById('ganttChart').innerHTML = d.areas.map(a => {
+  document.getElementById('ganttChart').innerHTML = d.areas.map((a, idx) => {
     const offPct  = (a.startOffset / maxHrs * 100).toFixed(2);
     const donePct = (a.completed   / maxHrs * 100).toFixed(2);
     const remPct  = (a.remaining   / maxHrs * 100).toFixed(2);
     const restPct = Math.max(0, 100 - parseFloat(offPct) - parseFloat(donePct) - parseFloat(remPct)).toFixed(2);
-    return `<div class="gantt-row">
+    return `<div class="gantt-row pd-click" onclick="pdShow(_gantt.areas[${idx}].name)" title="Click for detail">
       <div class="gantt-label" title="${a.name}">${a.name}</div>
       <div class="gantt-track">
         <div class="gantt-offset" style="flex:${offPct}"></div>
@@ -1051,6 +1088,132 @@ function renderOutstanding() {
 }
 // ── BOOT ──────────────────────────────────────────────────────
 loadAll();
+</script>
+
+<!-- ══ PACKAGE DRILL-DOWN POP-UP (added — self-contained) ══ -->
+<div class="pd-bg" id="pdModal" onclick="if(event.target===this)pdClose()">
+  <div class="pd-modal" role="dialog" aria-modal="true" aria-labelledby="pdTitle">
+    <div class="pd-head">
+      <div><div class="pd-eyebrow">Executive Summary</div><div class="pd-title" id="pdTitle"></div></div>
+      <button class="pd-close" onclick="pdClose()" aria-label="Close">×</button>
+    </div>
+    <div class="pd-body" id="pdBody"></div>
+  </div>
+</div>
+<script>
+// Notes and task detail are read from the Tasks tab of the schedule sheet,
+// fetched only when a row is first clicked (cached afterwards; refreshed by ↻ Refresh).
+const PD_SHEET_ID = '1MgT_vyPt5Ao7TD4a36I9gW6YMEz5Pn6JtUcxBoZsLpE';
+const PD_TAB = 'Tasks';
+let _pdRows = null, _pdLoading = null, _pdErr = null;
+
+function pdEsc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function pdNorm(s){ return String(s || '').trim().toLowerCase(); }
+function pdDelay(h){ if (h < 48) return fmtN1(h) + ' h'; const d = Math.floor(h/24); return d + 'd ' + Math.round(h - d*24) + 'h'; }
+
+function pdFetch(){
+  if (_pdRows) return Promise.resolve(_pdRows);
+  if (_pdLoading) return _pdLoading;
+  const base = 'https://docs.google.com/spreadsheets/d/' + PD_SHEET_ID + '/gviz/tq?sheet=' + encodeURIComponent(PD_TAB) + '&headers=1';
+  _pdLoading = new Promise((resolve, reject) => {
+    const cb = '__pd' + Date.now();
+    const s = document.createElement('script');
+    const timer = setTimeout(() => { done(); reject(new Error('timed out')); }, 20000);
+    function done(){ clearTimeout(timer); delete window[cb]; s.remove(); }
+    window[cb] = res => { done(); try { resolve(pdParse(res)); } catch(e){ reject(e); } };
+    s.onerror = () => { done(); reject(new Error('sheet not reachable')); };
+    s.src = base + '&tqx=responseHandler:' + cb + '&t=' + Date.now();
+    document.head.appendChild(s);
+  }).then(r => (_pdRows = r)).catch(e => { _pdErr = e.message; _pdRows = []; return _pdRows; })
+    .finally(() => { _pdLoading = null; });
+  return _pdLoading;
+}
+function pdParse(json){
+  const t = json && json.table; if (!t) throw new Error('unexpected sheet response');
+  const L = t.cols.map(c => (c.label || '').trim().toLowerCase());
+  const ix = n => L.indexOf(n.toLowerCase());
+  const I = { name:ix('Name'), pct:ix('% Complete'), pf:ix('Planned Finish'), team:ix('Team'), area:ix('Area'),
+    sub:ix('Sub Team'), slack:ix('Total Slack'), cpct:ix('CPCT'), summary:ix('Summary'), notes:ix('Notes'),
+    es:L.findIndex(l => /^exec\w*_summary$/.test(l)) };
+  const c = (r,i) => i >= 0 ? r.c[i] : null;
+  const str = x => (!x || x.v == null) ? '' : String(x.f ?? x.v).trim();
+  const num = x => { if (!x) return 0; if (typeof x.v === 'number') return (x.f && /%/.test(x.f) && x.v <= 1.0001) ? x.v*100 : x.v; const n = parseFloat(String(x.v ?? '').replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
+  const dt = x => { if (!x || !x.v) return null; const m = String(x.v).match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/); if (m) return new Date(+m[1],+m[2],+m[3],+(m[4]||0),+(m[5]||0)); const d = new Date(x.v); return isNaN(d) ? null : d; };
+  return t.rows.map(r => ({
+    name:str(c(r,I.name)), pct:Math.round(num(c(r,I.pct))), pf:dt(c(r,I.pf)),
+    team:str(c(r,I.team)), area:str(c(r,I.area)), sub:str(c(r,I.sub)),
+    slack:num(c(r,I.slack)), cpct:Math.round(num(c(r,I.cpct))),
+    summary:/^y/i.test(str(c(r,I.summary))), es:/^y/i.test(str(c(r,I.es))), notes:str(c(r,I.notes))
+  })).filter(r => r.name);
+}
+
+function pdShow(name){
+  if (!name) return;
+  const a = ((_exec && _exec.areas) || []).find(x => pdNorm(x.name) === pdNorm(name)) || {};
+  const g = ((_gantt && _gantt.areas) || []).find(x => pdNorm(x.name) === pdNorm(name)) || {};
+  const pc = a.pctComplete ?? g.pctComplete ?? 0;
+  const ov = a.finishVariance || 0;
+  const f = (l,v) => `<div><div class="pd-label">${l}</div><div class="pd-value">${v}</div></div>`;
+  const tagCls = pc >= 90 ? 'tag-green' : pc >= 50 ? 'tag-amber' : 'tag-red';
+  document.getElementById('pdTitle').textContent = name;
+  document.getElementById('pdBody').innerHTML =
+    `<div class="pd-bar"><b style="width:${Math.min(100,pc)}%"></b></div>
+     <div class="pd-grid">
+       ${f('% Complete', `<span class="tag ${tagCls}">${pc}%</span>`)}
+       ${f('Start', pdEsc(a.start || '—'))}
+       ${f('Forecast Finish', pdEsc(a.forecastFinish || '—'))}
+       ${f('Total Work', a.totalWork != null ? fmtN1(a.totalWork) + ' h' : '—')}
+       ${f('Completed', a.completedWork != null ? fmtN1(a.completedWork) + ' h' : '—')}
+       ${f('Remaining', a.remainingWork != null ? fmtN1(a.remainingWork) + ' h' : '—')}
+       ${f('Duration', a.duration != null ? fmtN1(a.duration) + ' h' : '—')}
+       ${f('Hrs to Critical', a.hoursToCritical != null ? fmtN0(a.hoursToCritical) : '—')}
+       ${f('Finish Variance', a.finishVariance != null ? fvTag(ov) + ' h' : '—')}
+     </div>
+     <div id="pdDetail"><div class="pd-loading">Loading notes from schedule…</div></div>`;
+  document.getElementById('pdModal').classList.add('open');
+  pdFetch().then(rows => { if (document.getElementById('pdTitle').textContent === name) pdDetail(name, rows); });
+}
+
+function pdDetail(name, rows){
+  const key = pdNorm(name), now = new Date();
+  const sumRow = rows.find(r => r.summary && r.es && pdNorm(r.name) === key)
+              || rows.find(r => r.summary && pdNorm(r.name) === key)
+              || rows.find(r => pdNorm(r.name) === key);
+  const kids = rows.filter(r => !r.summary && (pdNorm(r.team) === key || pdNorm(r.area) === key || pdNorm(r.sub) === key));
+  let h = '';
+  if (kids.length){
+    const done = kids.filter(t => t.pct >= 100).length;
+    const prog = kids.filter(t => t.pct > 0 && t.pct < 100).length;
+    const late = kids.filter(t => t.pct < 100 && t.pf && t.pf < now);
+    const crit = kids.filter(t => t.pct < 100 && t.slack <= 0).length;
+    h += `<div class="pd-sec-label">Tasks in this area</div>
+      <div class="pd-stats">
+        <div class="pd-stat"><b>${kids.length}</b><span>Total</span></div>
+        <div class="pd-stat"><b style="color:var(--green)">${done}</b><span>Complete</span></div>
+        <div class="pd-stat"><b style="color:var(--blue)">${prog}</b><span>In progress</span></div>
+        <div class="pd-stat"><b style="color:${late.length ? 'var(--red)' : 'var(--bright)'}">${late.length}</b><span>Late</span></div>
+        <div class="pd-stat"><b style="color:${crit ? 'var(--amber)' : 'var(--bright)'}">${crit}</b><span>0 Slack open</span></div>
+      </div>`;
+    if (late.length){
+      const top = late.map(t => ({ t, hrs:(now - t.pf)/36e5 })).sort((x,y) => y.hrs - x.hrs).slice(0,6);
+      const cp = c => c === 1 ? '<span style="color:var(--red)">●</span> CP' : c === 2 ? '<span style="color:var(--amber)">●</span> CT' : '—';
+      h += `<table class="pd-late"><thead><tr><th>Late task</th><th>CP/CT</th><th>%</th><th>Late by</th></tr></thead><tbody>` +
+        top.map(({t,hrs}) => `<tr><td>${pdEsc(t.name)}</td><td>${cp(t.cpct)}</td><td>${t.pct}%</td><td style="color:var(--red);font-family:var(--font-d)">${pdDelay(hrs)}</td></tr>`).join('') +
+        `</tbody></table>` + (late.length > 6 ? `<div class="pd-more">+ ${late.length - 6} more late tasks</div>` : '<div class="pd-more"></div>');
+    }
+  }
+  const note = sumRow && sumRow.notes;
+  h += `<div class="pd-sec-label">Notes from Project</div>` +
+    (_pdErr && !rows.length
+      ? `<div class="pd-notes pd-empty">Notes could not be loaded (${pdEsc(_pdErr)}).</div>`
+      : note ? `<div class="pd-notes">${pdEsc(note)}</div>`
+             : `<div class="pd-notes pd-empty">No notes recorded against this summary task in Project.</div>`);
+  document.getElementById('pdDetail').innerHTML = h;
+}
+function pdClose(){ document.getElementById('pdModal').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') pdClose(); });
+// Clear the cache when the dashboard's Refresh runs, so notes are re-read next click
+(function(){ const orig = window.loadAll; if (typeof orig === 'function') window.loadAll = function(){ _pdRows = null; _pdErr = null; return orig.apply(this, arguments); }; })();
 </script>
 </body>
 </html>
